@@ -1,0 +1,11 @@
+# Mac
+.DS_Store
+
+# Credentials
+credentials/
+secret/
+*.no-git.*
+
+# Ansible
+*.retry
+
