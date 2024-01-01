@@ -1,0 +1,12 @@
+# https://docs.ansible.com/ansible/latest/collections/amazon/aws/docsite/guide_aws.html
+- name: Set up AWS Infrastructure
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Create a VPC
+      amazon.aws.ec2_vpc_net:
+        name: ansible_vpc
+        region: us-east-1
+        state: present
+        tags:
+          Ansible_created: true
