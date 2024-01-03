@@ -2,11 +2,39 @@
 - name: Set up AWS Infrastructure
   hosts: localhost
   gather_facts: false
+  vars:
+    vpc_cidr_block: 10.0.0.0/16
+    subnet_a:
+      az: us-east-1d
+      cider_block: 10.0.1.0/24
+    subnet_b:
+      az: us-east-1a
+      cider_block: 10.0.2.0/24
   tasks:
     - name: Create a VPC
       amazon.aws.ec2_vpc_net:
         name: ansible_vpc
         region: us-east-1
         state: present
+        cidr_block: "{{ vpc_cidr_block }}"
         tags:
           Ansible_created: true
+      register: vpc
+
+    - name: Create subnet A
+      amazon.aws.ec2_vpc_subnet:
+        state: present
+        vpc_id: "{{ vpc.vpc.id }}"
+        cidr: "{{ subnet_a.cider_block }}"
+        az: "{{ subnet_a.az }}"
+
+    - name: Create subnet B
+      amazon.aws.ec2_vpc_subnet:
+        state: present
+        vpc_id: "{{ vpc.vpc.id }}"
+        cidr: "{{ subnet_b.cider_block }}"
+        az: "{{ subnet_b.az }}"
+
+    # - name: Create security Group
+    # - name: Create EC2 instances
+    # - name: Create RDS instance
