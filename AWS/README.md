@@ -7,6 +7,7 @@ A practice project to implement a simple [3 tier web application](./aws_3_tier.d
 - May need to install the AWS collection is using ansible-core. (`ansible-galaxy collection install amazon.aws`)
 - `botocore` and `boto3` are required for AWS modules to run.
 - AWS credentials must be set as environmental variables.
+- A file name `secret` must be created.
 
 ## AWS Credentials
 

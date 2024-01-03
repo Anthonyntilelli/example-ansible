@@ -35,6 +35,46 @@
         cidr: "{{ subnet_b.cider_block }}"
         az: "{{ subnet_b.az }}"
 
-    # - name: Create security Group
+    - name: Create security Group for Frontend
+      amazon.aws.ec2_security_group:
+        description: "Frontend security group"
+        name: frontend-sg
+        state: present
+        vpc_id: "{{ vpc.vpc.id }}"
+        rules:
+          - proto: tcp
+            ports:
+              - 80
+            cidr_ip: 0.0.0.0/0
+            rule_desc: allow all on port 80
+          - proto: tcp
+            ports:
+              - 22
+            cidr_ip: 0.0.0.0/0
+            rule_desc: allow all for ssh
+
+    - name: Create security Group for Backend
+      amazon.aws.ec2_security_group:
+        description: "Backend security group"
+        name: backend-sg
+        state: present
+        vpc_id: "{{ vpc.vpc.id }}"
+        rules:
+          - proto: tcp
+            ports:
+              - 3306
+            cidr_ip: "{{ vpc_cidr_block }}"
+            rule_desc: allow all on port 3306
+
+    - name: Create EC2 instance ssh key
+      amazon.aws.ec2_key:
+        name: ansible_key
+        key_type: ed25519
+        file_name: ./secret/aws_ssh_key
+        state: present
+
+    # https://docs.ansible.com/ansible/latest/collections/amazon/aws/ec2_instance_module.html#ansible-collections-amazon-aws-ec2-instance-module
     # - name: Create EC2 instances
+    #   amazon.aws.ec2_instance:
+
     # - name: Create RDS instance
