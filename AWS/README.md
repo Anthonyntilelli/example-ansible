@@ -1,6 +1,6 @@
 # Ansible and AWS
 
-A practice project to implement a simple [3 tier web application](./aws_3_tier.drawio.svg) in aws.
+A practice project to implement a simple [web application](./aws_web_application.drawio.svg) in aws.
 
 ## Pre-requisite
 

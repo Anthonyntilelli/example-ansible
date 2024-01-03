@@ -7,9 +7,13 @@
     subnet_a:
       az: us-east-1d
       cider_block: 10.0.1.0/24
-    subnet_b:
-      az: us-east-1a
-      cider_block: 10.0.2.0/24
+    ec2_instances_names:
+      - load_balancer
+      - http_node_1
+      - http_node_2
+      - http_node_3
+    ec2_AIM: ami-0c7217cdde317cfec # Ubuntu Server 22.04 LTS
+
   tasks:
     - name: Create a VPC
       amazon.aws.ec2_vpc_net:
@@ -21,19 +25,13 @@
           Ansible_created: true
       register: vpc
 
-    - name: Create subnet A
+    - name: Create subnet
       amazon.aws.ec2_vpc_subnet:
         state: present
         vpc_id: "{{ vpc.vpc.id }}"
         cidr: "{{ subnet_a.cider_block }}"
         az: "{{ subnet_a.az }}"
-
-    - name: Create subnet B
-      amazon.aws.ec2_vpc_subnet:
-        state: present
-        vpc_id: "{{ vpc.vpc.id }}"
-        cidr: "{{ subnet_b.cider_block }}"
-        az: "{{ subnet_b.az }}"
+      register: ec2_vpc_subnet
 
     - name: Create security Group for Frontend
       amazon.aws.ec2_security_group:
@@ -52,19 +50,7 @@
               - 22
             cidr_ip: 0.0.0.0/0
             rule_desc: allow all for ssh
-
-    - name: Create security Group for Backend
-      amazon.aws.ec2_security_group:
-        description: "Backend security group"
-        name: backend-sg
-        state: present
-        vpc_id: "{{ vpc.vpc.id }}"
-        rules:
-          - proto: tcp
-            ports:
-              - 3306
-            cidr_ip: "{{ vpc_cidr_block }}"
-            rule_desc: allow all on port 3306
+      register: frontend_sg
 
     - name: Create EC2 instance ssh key
       amazon.aws.ec2_key:
@@ -72,9 +58,15 @@
         key_type: ed25519
         file_name: ./secret/aws_ssh_key
         state: present
+      register: ssh_key
 
-    # https://docs.ansible.com/ansible/latest/collections/amazon/aws/ec2_instance_module.html#ansible-collections-amazon-aws-ec2-instance-module
-    # - name: Create EC2 instances
-    #   amazon.aws.ec2_instance:
+    - name: Create EC2 instances
+      amazon.aws.ec2_instance:
+        name: "{{ item }}"
+        vpc_subnet_id: "{{ ec2_vpc_subnet.subnet.id }}"
+        instance_type: t2.micro
+        key_name: "{{ ssh_key.key.name }}"
+        security_group: "{{ frontend_sg.group_id }}"
+        image_id: "{{ ec2_AIM }}"
+      loop: "{{ ec2_instances_names }}"
 
-    # - name: Create RDS instance
