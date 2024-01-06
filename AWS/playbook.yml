@@ -1,4 +1,3 @@
-# https://docs.ansible.com/ansible/latest/collections/amazon/aws/docsite/guide_aws.html
 - name: Set up AWS Infrastructure
   hosts: localhost
   gather_facts: false
@@ -18,4 +17,4 @@
   become: true
   tasks:
   roles:
-    - { role: haproxy, haproxy_ip_addr: "{{ hostvars['localhost'].backend_ip_addr }}"  }
+    - { role: haproxy, haproxy_ip_addr: "{{ hostvars['localhost'].backend_ip_addr }}" }
