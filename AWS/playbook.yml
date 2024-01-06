@@ -2,19 +2,6 @@
 - name: Set up AWS Infrastructure
   hosts: localhost
   gather_facts: false
-  vars:
-    vpc_cidr_block: 10.0.0.0/16
-    subnet_a:
-      az: us-east-1d
-      cider_block: 10.0.1.0/24
-    ec2_instance_frontend:
-      - frontend
-    ec2_instances_backend:
-      - http_node_1
-      - http_node_2
-      - http_node_3
-    ec2_aim: ami-0c7217cdde317cfec # Ubuntu Server 22.04 LTS
-
   tasks:
     - include_tasks: ./tasks/aws_config.yml
     - include_tasks: ./tasks/update_hosts.yml
