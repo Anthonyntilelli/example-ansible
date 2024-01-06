@@ -7,8 +7,9 @@
     subnet_a:
       az: us-east-1d
       cider_block: 10.0.1.0/24
-    ec2_instances_names:
-      - load_balancer
+    ec2_instance_frontend:
+      - frontend
+    ec2_instances_backend:
       - http_node_1
       - http_node_2
       - http_node_3
@@ -25,6 +26,12 @@
           Ansible_created: true
       register: vpc
 
+    - name: Create Internet gateway
+      amazon.aws.ec2_vpc_igw:
+        vpc_id: "{{ vpc.vpc.id }}"
+        state: present
+      register: igw
+
     - name: Create subnet
       amazon.aws.ec2_vpc_subnet:
         state: present
@@ -32,6 +39,19 @@
         cidr: "{{ subnet_a.cider_block }}"
         az: "{{ subnet_a.az }}"
       register: ec2_vpc_subnet
+
+    - name: Create a Routing table
+      amazon.aws.ec2_vpc_route_table:
+        vpc_id: "{{ vpc.vpc.id }}"
+        tags:
+          Name: Public
+        subnets:
+          - "{{ ec2_vpc_subnet.subnet.id }}"
+        routes:
+          - dest: 0.0.0.0/0
+            gateway_id: "{{ igw.gateway_id }}"
+          - dest: ::/0
+            gateway_id: "{{ igw.gateway_id }}"
 
     - name: Create security Group for Frontend
       amazon.aws.ec2_security_group:
@@ -60,7 +80,7 @@
         state: present
       register: ssh_key
 
-    - name: Create EC2 instances
+    - name: Create EC2 frontend instances
       amazon.aws.ec2_instance:
         name: "{{ item }}"
         vpc_subnet_id: "{{ ec2_vpc_subnet.subnet.id }}"
@@ -68,5 +88,46 @@
         key_name: "{{ ssh_key.key.name }}"
         security_group: "{{ frontend_sg.group_id }}"
         image_id: "{{ ec2_AIM }}"
-      loop: "{{ ec2_instances_names }}"
+        network:
+          assign_public_ip: true
+          delete_on_termination: true
+      loop: "{{ ec2_instance_frontend }}"
+      register: frontend_instances
 
+    - name: Create EC2 backend instances
+      amazon.aws.ec2_instance:
+        name: "{{ item }}"
+        vpc_subnet_id: "{{ ec2_vpc_subnet.subnet.id }}"
+        instance_type: t2.micro
+        key_name: "{{ ssh_key.key.name }}"
+        security_group: "{{ frontend_sg.group_id }}"
+        image_id: "{{ ec2_AIM }}"
+        network:
+          assign_public_ip: true
+          delete_on_termination: true
+      loop: "{{ ec2_instances_backend }}"
+      register: backend_instances
+
+    - name: Add host to Frontend group
+      ansible.builtin.add_host:
+        hostname: "{{ item.instances[0].public_ip_address }}"
+        ansible_user: ubuntu
+        ansible_ssh_private_key_file: ./secret/aws_ssh_key
+        groups:
+          - frontend
+      with_items: "{{ frontend_instances.results }}"
+
+    - name: Add host to Backend group
+      ansible.builtin.add_host:
+        hostname: "{{ item.instances[0].public_ip_address }}"
+        ansible_user: ubuntu
+        ansible_ssh_private_key_file: ./secret/aws_ssh_key
+        groups:
+          - backend
+      with_items: "{{ backend_instances.results }}"
+
+- name: Set up Frontend
+  hosts: frontend
+  tasks:
+    - name: Ping
+      ansible.builtin.ping:
