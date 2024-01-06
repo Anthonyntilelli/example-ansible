@@ -1,0 +1,17 @@
+- name: Add host to Frontend group
+  ansible.builtin.add_host:
+    hostname: "{{ item.instances[0].public_ip_address }}"
+    ansible_user: ubuntu
+    ansible_ssh_private_key_file: ./secret/aws_ssh_key
+    groups:
+      - frontend
+  with_items: "{{ frontend_instances.results }}"
+
+- name: Add host to Backend group
+  ansible.builtin.add_host:
+    hostname: "{{ item.instances[0].public_ip_address }}"
+    ansible_user: ubuntu
+    ansible_ssh_private_key_file: ./secret/aws_ssh_key
+    groups:
+      - backend
+  with_items: "{{ backend_instances.results }}"
