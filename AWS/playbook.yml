@@ -18,3 +18,7 @@
   tasks:
     - name: Ping
       ansible.builtin.ping:
+
+    - name: Debug
+      ansible.builtin.debug:
+        msg: "{{  hostvars['localhost'].backend_ip_addr }}"

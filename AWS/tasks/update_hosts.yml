@@ -15,3 +15,8 @@
     groups:
       - backend
   with_items: "{{ backend_instances.results }}"
+
+- name: Set backend fact
+  ansible.builtin.set_fact:
+     backend_ip_addr: "{{ backend_ip_addr | default([]) + [item.instances[0].public_ip_address] }}"
+  with_items: "{{ backend_instances.results }}"
