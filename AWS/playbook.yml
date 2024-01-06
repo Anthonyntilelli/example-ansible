@@ -15,10 +15,7 @@
 
 - name: Set up Frontend
   hosts: frontend
+  become: true
   tasks:
-    - name: Ping
-      ansible.builtin.ping:
-
-    - name: Debug
-      ansible.builtin.debug:
-        msg: "{{  hostvars['localhost'].backend_ip_addr }}"
+  roles:
+    - { role: haproxy, haproxy_ip_addr: "{{ hostvars['localhost'].backend_ip_addr }}"  }
