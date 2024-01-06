@@ -72,6 +72,12 @@
             rule_desc: allow all for ssh
       register: frontend_sg
 
+    - name: Create secret folder
+      ansible.builtin.file:
+        path: ./secret
+        state: directory
+        mode: u=rwx
+
     - name: Create EC2 instance ssh key
       amazon.aws.ec2_key:
         name: ansible_key
@@ -125,6 +131,12 @@
         groups:
           - backend
       with_items: "{{ backend_instances.results }}"
+
+- name: Set up Backend
+  hosts: backend
+  tasks:
+    - name: Ping
+      ansible.builtin.ping:
 
 - name: Set up Frontend
   hosts: frontend
