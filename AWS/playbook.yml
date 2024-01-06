@@ -89,6 +89,7 @@
     - name: Create EC2 frontend instances
       amazon.aws.ec2_instance:
         name: "{{ item }}"
+        state: running
         vpc_subnet_id: "{{ ec2_vpc_subnet.subnet.id }}"
         instance_type: t2.micro
         key_name: "{{ ssh_key.key.name }}"
@@ -103,6 +104,7 @@
     - name: Create EC2 backend instances
       amazon.aws.ec2_instance:
         name: "{{ item }}"
+        state: running
         vpc_subnet_id: "{{ ec2_vpc_subnet.subnet.id }}"
         instance_type: t2.micro
         key_name: "{{ ssh_key.key.name }}"
@@ -113,6 +115,11 @@
           delete_on_termination: true
       loop: "{{ ec2_instances_backend }}"
       register: backend_instances
+
+    - name: Pause playbook for EC2 instance to fully run.
+      ansible.builtin.pause:
+        seconds: 30
+      when: backend_instances.changed or frontend_instances.changed
 
     - name: Add host to Frontend group
       ansible.builtin.add_host:
@@ -134,9 +141,9 @@
 
 - name: Set up Backend
   hosts: backend
-  tasks:
-    - name: Ping
-      ansible.builtin.ping:
+  become: true
+  roles:
+    - { role: webserver }
 
 - name: Set up Frontend
   hosts: frontend
