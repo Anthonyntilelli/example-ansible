@@ -1,0 +1,20 @@
+- name: Set up AWS Infrastructure
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - include_tasks: ./tasks/aws_config.yml
+    - include_tasks: ./tasks/update_hosts.yml
+
+
+- name: Set up Backend
+  hosts: backend
+  become: true
+  roles:
+    - { role: webserver }
+
+- name: Set up Frontend
+  hosts: frontend
+  become: true
+  tasks:
+  roles:
+    - { role: haproxy, haproxy_ip_addr: "{{ hostvars['localhost'].backend_ip_addr }}" }

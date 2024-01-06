@@ -1,0 +1,105 @@
+# AWS setup task
+- name: Create a VPC
+  amazon.aws.ec2_vpc_net:
+    name: ansible_vpc
+    region: us-east-1
+    state: present
+    cidr_block: "{{ vpc_cidr_block }}"
+    tags:
+      Ansible_created: true
+  register: vpc
+
+- name: Create Internet gateway
+  amazon.aws.ec2_vpc_igw:
+    vpc_id: "{{ vpc.vpc.id }}"
+    state: present
+  register: igw
+
+- name: Create subnet
+  amazon.aws.ec2_vpc_subnet:
+    state: present
+    vpc_id: "{{ vpc.vpc.id }}"
+    cidr: "{{ subnet_a.cider_block }}"
+    az: "{{ subnet_a.az }}"
+  register: ec2_vpc_subnet
+
+- name: Create a Routing table
+  amazon.aws.ec2_vpc_route_table:
+    vpc_id: "{{ vpc.vpc.id }}"
+    tags:
+      Name: Public
+    subnets:
+      - "{{ ec2_vpc_subnet.subnet.id }}"
+    routes:
+      - dest: 0.0.0.0/0
+        gateway_id: "{{ igw.gateway_id }}"
+      - dest: ::/0
+        gateway_id: "{{ igw.gateway_id }}"
+
+- name: Create security Group for Frontend
+  amazon.aws.ec2_security_group:
+    description: "Frontend security group"
+    name: frontend-sg
+    state: present
+    vpc_id: "{{ vpc.vpc.id }}"
+    rules:
+      - proto: tcp
+        ports:
+          - 80
+        cidr_ip: 0.0.0.0/0
+        rule_desc: allow all on port 80
+      - proto: tcp
+        ports:
+          - 22
+        cidr_ip: 0.0.0.0/0
+        rule_desc: allow all for ssh
+  register: frontend_sg
+
+- name: Create secret folder
+  ansible.builtin.file:
+    path: ./secret
+    state: directory
+    mode: u=rwx
+
+- name: Create EC2 instance ssh key
+  amazon.aws.ec2_key:
+    name: ansible_key
+    key_type: ed25519
+    file_name: ./secret/aws_ssh_key
+    state: present
+  register: ssh_key
+
+- name: Create EC2 frontend instances
+  amazon.aws.ec2_instance:
+    name: "{{ item }}"
+    state: running
+    vpc_subnet_id: "{{ ec2_vpc_subnet.subnet.id }}"
+    instance_type: t2.micro
+    key_name: "{{ ssh_key.key.name }}"
+    security_group: "{{ frontend_sg.group_id }}"
+    image_id: "{{ ec2_aim }}"
+    network:
+      assign_public_ip: true
+      delete_on_termination: true
+  loop: "{{ ec2_instance_frontend }}"
+  register: frontend_instances
+
+- name: Create EC2 backend instances
+  amazon.aws.ec2_instance:
+    name: "{{ item }}"
+    state: running
+    vpc_subnet_id: "{{ ec2_vpc_subnet.subnet.id }}"
+    instance_type: t2.micro
+    key_name: "{{ ssh_key.key.name }}"
+    security_group: "{{ frontend_sg.group_id }}"
+    image_id: "{{ ec2_aim }}"
+    network:
+      assign_public_ip: true
+      delete_on_termination: true
+  loop: "{{ ec2_instances_backend }}"
+  register: backend_instances
+
+- name: Pause playbook for EC2 instance to fully run.
+  ansible.builtin.pause:
+    seconds: 30
+  when: backend_instances.changed or frontend_instances.changed

@@ -1,0 +1,48 @@
+---
+
+- name: Fail on not Debian
+  ansible.builtin.fail:
+    msg: Playbook is not designed to run on non-Debian systems.
+  when: ansible_facts['os_family']|lower != 'debian'
+
+- name: Install web server for Debian
+  ansible.builtin.apt:
+    name: nginx
+    state: latest
+    update_cache: true
+
+- name: Starting and enabling service
+  ansible.builtin.service:
+    name: nginx
+    state: started
+    enabled: true
+
+- name: Allow all access to tcp port 80 (does not enable ufw)
+  community.general.ufw:
+    rule: allow
+    port: '80'
+    proto: tcp
+
+- name: Ensure /var/www/html exists
+  ansible.builtin.file:
+    path: /var/www/html
+    state: directory
+    owner: root
+    group: root
+    mode: u=xrw,g=xr,o=x
+
+- name: Remove default index.html
+  ansible.builtin.file:
+    path: /var/www/html/index.nginx-debian.html
+    state: absent
+
+- name: Set up webpage
+  ansible.builtin.copy:
+    src: ./roles/webserver/files/index.html
+    dest: /var/www/html/index.html
+    owner: root
+    group: root
+    mode: u=rw,g=r,o=r
+    backup: true
+  notify:
+    - Restart nginx
